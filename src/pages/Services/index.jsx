@@ -4,26 +4,46 @@ import { PlusOutlined, EditOutlined } from "@ant-design/icons";
 import PageCard from "@/components/PageCard.jsx";
 import PageHeader from "@/components/PageHeader.jsx";
 import AuntieModal from "@/components/forms/AuntieModal.jsx";
-import { auntiesApi } from "@/api/index.js";
+import { auntiesApi } from "@/api/aunties";
 
 const typeLabel = {
-  domestic: "学习测试阿姨",
-  maternity: "月嫂",
+  1: "家政",
+  2: "月嫂",
 };
 
 export default function Services() {
   const { message } = App.useApp();
+  const [page, setPage] = useState({
+    current: 1,
+    size: 10,
+    total: 0,
+  });
   const [rows, setRows] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
 
-  const reload = async () => {
-    setRows(await auntiesApi.list());
+  const getData = async () => {
+    console.log(222);
+    
+    const res = await auntiesApi.list({ page: page.current, size: page.size });
+
+    // Back-compat: if backend returns a plain array, still render it.
+    if (Array.isArray(res)) {
+      setRows(res?.records || []);
+      setPage((prev) => ({ ...prev, total: res.length }));
+      return;
+    }
+
+    setRows(res?.records || []);
+    setPage((prev) => ({ ...prev, total: Number(res?.total) || 0 }));
   };
 
+
+  
+
   useEffect(() => {
-    reload();
-  }, []);
+    getData();
+  }, [page.current, page.size]);
 
   const columns = useMemo(
     () => [
@@ -32,7 +52,7 @@ export default function Services() {
         dataIndex: "name",
         render: (_, record) => (
           <Space>
-            <Avatar size={46} src={record.photo || undefined}>
+            <Avatar size={46} src={'https://requests.taiyang.chat/' + record.avatar || undefined}>
               {record.name?.slice?.(0, 1) || "A"}
             </Avatar>
             <div>
@@ -43,12 +63,20 @@ export default function Services() {
         ),
       },
       {
+        title: "手机号",
+        dataIndex: "phone",
+      },
+      {
+        title: "价格",
+        dataIndex: "price",
+      },
+      {
         title: "类型",
-        dataIndex: "type",
-        render: (value) => (
-          <Tag color={value === "maternity" ? "magenta" : "blue"}>
-            {typeLabel[value]}
-          </Tag>
+        dataIndex: "categoryName",
+        render: (_, record) => (
+          <Space>
+            <Tag color="blue">{record.categoryName}</Tag>
+          </Space>
         ),
       },
       {
@@ -60,18 +88,20 @@ export default function Services() {
             onChange={async (checked) => {
               await auntiesApi.update(record.id, { active: checked });
               message.success(checked ? "已上架" : "已下架");
-              reload();
             }}
           />
         ),
       },
       {
         title: "操作",
+        width: 120,
         render: (_, record) => (
           <Button
             icon={<EditOutlined />}
             onClick={() => {
               setEditing(record);
+              console.log(record, 'editing');
+              record.avatarFile = record.avatar
               setOpen(true);
             }}
           >
@@ -87,7 +117,7 @@ export default function Services() {
     <PageCard>
       <PageHeader
         title="服务管理"
-        subtitle="两类服务人员：学习测试阿姨 / 月嫂，支持上架开关与新增编辑弹窗"
+        subtitle="支持上架开关与新增编辑弹窗"
         extra={
           <Button
             type="primary"
@@ -101,7 +131,19 @@ export default function Services() {
           </Button>
         }
       />
-      <Table columns={columns} dataSource={rows} rowKey="id" pagination={false} />
+      <Table
+        columns={columns}
+        dataSource={rows}
+        rowKey="id"
+        pagination={{
+          current: page.current,
+          pageSize: page.size,
+          total: page.total,
+          showSizeChanger: true,
+          onChange: (current, pageSize) =>
+            setPage((prev) => ({ ...prev, current, size: pageSize })),
+          }}
+      />
       <AuntieModal
         open={open}
         initialValue={editing}
@@ -110,16 +152,21 @@ export default function Services() {
           setEditing(null);
         }}
         onOk={async (values) => {
+          console.log(values);
+          console.log(editing);
+          
           if (editing?.id) {
-            await auntiesApi.update(editing.id, values);
+            await auntiesApi.put({ ...values, id: editing.id });
             message.success("已保存");
+            setPage((prev) => ({ ...prev, current: 1 }));
           } else {
-            await auntiesApi.create(values);
+            await auntiesApi.add(values);
             message.success("已新增");
+            setPage((prev) => ({ ...prev, current: 1 }));
           }
           setOpen(false);
           setEditing(null);
-          reload();
+          // If we just created, jumping to page 1 will trigger reload via useEffect.
         }}
       />
     </PageCard>

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Button, Form, Input, Modal, Select, Upload } from "antd";
+import { Button, Form, Input, Modal, Select, Upload, InputNumber } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 
 const typeOptions = [
-  { value: "domestic", label: "学习测试阿姨" },
-  { value: "maternity", label: "月嫂" },
+  { value: "1", label: "月嫂" },
+  { value: "2", label: "保洁" },
+  { value: "3", label: "家政" },
 ];
 
 const toBase64 = (file) =>
@@ -23,13 +24,16 @@ export default function AuntieModal({ open, initialValue, onCancel, onOk }) {
     if (!open) return;
     form.setFieldsValue({
       name: initialValue?.name ?? "",
-      type: initialValue?.type ?? "domestic",
+      categoryId: initialValue?.categoryId ?? "1",
       intro: initialValue?.intro ?? "",
-      photo: initialValue?.photo ?? "",
+      price: initialValue?.price ?? "",
+      avatarFile: 'https://requests.taiyang.chat/' + (initialValue?.avatar || ""),
+      phone: initialValue?.phone ?? "",
+      age: initialValue?.age ?? ""
     });
     setFileList(
-      initialValue?.photo
-        ? [{ uid: "photo", name: "photo", status: "done", url: initialValue.photo }]
+      initialValue?.avatarFile
+        ? [{ uid: "photo", name: "photo", status: "done", url:'https://requests.taiyang.chat' + initialValue.avatarFile }]
         : []
     );
   }, [open, initialValue, form]);
@@ -43,6 +47,8 @@ export default function AuntieModal({ open, initialValue, onCancel, onOk }) {
       cancelText="取消"
       onOk={async () => {
         const values = await form.validateFields();
+        console.log(values, 'values');
+        
         onOk(values);
       }}
     >
@@ -56,7 +62,7 @@ export default function AuntieModal({ open, initialValue, onCancel, onOk }) {
         </Form.Item>
         <Form.Item
           label="类型"
-          name="type"
+          name="categoryId"
           rules={[{ required: true, message: "请选择类型" }]}
         >
           <Select options={typeOptions} />
@@ -68,7 +74,33 @@ export default function AuntieModal({ open, initialValue, onCancel, onOk }) {
         >
           <Input.TextArea rows={3} placeholder="经验、擅长项目等" />
         </Form.Item>
-        <Form.Item label="照片" name="photo">
+        <Form.Item
+          label="电话"
+          name="phone"
+          rules={[{ required: true, message: "请输入电话" }]}
+        >
+          <Input.TextArea rows={1} placeholder="联系方式" />
+        </Form.Item>
+        <Form.Item
+          label="年龄"
+          name="age"
+          rules={[{ required: true, message: "请输入年龄" }]}
+        >
+          <Input.TextArea rows={1} placeholder="年龄" />
+        </Form.Item>
+        <Form.Item
+          label="价格"
+          name="price"
+          rules={[{ required: true, message: "请输入价格" }]}
+        >
+          <InputNumber
+            style={{ width: "100%" }}
+            placeholder="单次服务价格"
+            min={0}
+            precision={2} // 保留2位小数（可选）
+          />
+        </Form.Item>
+        <Form.Item label="照片" name="avatarFile" rules={[{ required: true, message: "请上传照片" }]}>
           <Upload
             listType="picture"
             maxCount={1}
