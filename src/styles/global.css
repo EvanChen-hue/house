@@ -1,0 +1,276 @@
+@import "./theme.css";
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--hk-bg);
+  color: var(--hk-text);
+}
+
+#root {
+  height: 100%;
+}
+
+.hk-shell {
+  min-height: 100vh;
+}
+
+.hk-sider {
+  background: rgba(255, 255, 255, 0.78) !important;
+  backdrop-filter: blur(14px);
+  border-right: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.hk-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 16px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.hk-logo {
+  width: 42px;
+  height: 42px;
+}
+
+.hk-brandText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.12;
+}
+
+.hk-brandTitle {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.hk-brandSub {
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.55);
+}
+
+.hk-menu {
+  padding: 8px 10px 16px;
+  background: transparent;
+}
+
+.hk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px;
+  background: rgba(255, 255, 255, 0.76) !important;
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.hk-headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hk-headerTitle {
+  margin: 0 !important;
+}
+
+.hk-profile {
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(241, 245, 249, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.hk-profileText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.hk-profileName {
+  font-weight: 650;
+}
+
+.hk-profileMeta {
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.55);
+}
+
+.hk-content {
+  padding: 22px;
+}
+
+.hk-login {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: row;
+  gap: 22px;
+  padding: 28px;
+  justify-content: center;
+  align-items: center;
+}
+
+.hk-loginPanel {
+  max-width: 520px;
+  padding: 26px 26px 22px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 30px 90px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(16px);
+}
+
+.hk-loginHead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.hk-loginLogo {
+  width: 48px;
+  height: 48px;
+}
+
+.hk-loginHint {
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.55);
+  text-align: center;
+}
+
+.hk-loginDecor {
+  position: relative;
+  padding: 30px 26px;
+  border-radius: 26px;
+  background: linear-gradient(135deg, rgba(30, 111, 255, 0.10), rgba(32, 201, 151, 0.06));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.10);
+}
+
+.hk-decorTitle {
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: 0.4px;
+}
+
+.hk-decorSub {
+  margin-top: 6px;
+  color: rgba(15, 23, 42, 0.60);
+}
+
+.hk-decorCards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+.hk-decorCard {
+  padding: 14px 14px 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  backdrop-filter: blur(12px);
+}
+
+.hk-decorK {
+  color: rgba(15, 23, 42, 0.55);
+  font-size: 12px;
+}
+
+.hk-decorV {
+  font-weight: 800;
+  font-size: 22px;
+  margin-top: 6px;
+}
+
+.hk-decorGlow {
+  position: absolute;
+  inset: -40% -20%;
+  background: radial-gradient(circle at 30% 30%, rgba(30, 111, 255, 0.30), transparent 55%),
+    radial-gradient(circle at 70% 60%, rgba(255, 176, 32, 0.20), transparent 60%),
+    radial-gradient(circle at 45% 80%, rgba(32, 201, 151, 0.24), transparent 55%);
+  filter: blur(18px);
+  opacity: 0.9;
+}
+
+.hk-card {
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.hk-pageHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.hk-pageHeadTitle {
+  margin: 0 !important;
+}
+
+.hk-pageHeadSub {
+  color: rgba(15, 23, 42, 0.55);
+}
+
+.hk-statGrid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.hk-stat {
+  grid-column: span 3;
+  border-radius: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(246, 249, 255, 0.68));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.hk-statLabel {
+  color: rgba(15, 23, 42, 0.55);
+}
+
+.hk-statValue {
+  margin: 6px 0 4px !important;
+}
+
+.hk-chartBox {
+  height: 430px;
+}
+
+@media (max-width: 1024px) {
+  .hk-login {
+    grid-template-columns: 1fr;
+  }
+  .hk-stat {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 640px) {
+  .hk-content {
+    padding: 14px;
+  }
+  .hk-stat {
+    grid-column: span 12;
+  }
+  .hk-chartBox {
+    height: 360px;
+  }
+}
