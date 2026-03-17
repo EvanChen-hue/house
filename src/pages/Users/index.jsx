@@ -5,16 +5,19 @@ import PageHeader from "@/components/PageHeader.jsx";
 import { usersApi } from "@/api/index.js";
 
 export default function Users() {
+
+  const [page, setPage] = useState({
+    current: 1,
+    size: 10,
+    total: 0,
+  });
   const [rows, setRows] = useState([]);
 
-  useEffect(() => {
-    let mounted = true;
-    usersApi.list().then((res) => {
-      if (mounted) setRows(res);
+  useEffect(async  () => {
+    const res = await usersApi.userList({
+      page: page.current,
+      size: page.size,
     });
-    return () => {
-      mounted = false;
-    };
   }, []);
 
   const columns = [
@@ -34,11 +37,11 @@ export default function Users() {
 
   return (
     <PageCard>
-      <PageHeader
+      {/* <PageHeader
         title="用户管理"
         subtitle="用户信息、上门地址与服务数据（演示数据，可接入后端）"
       />
-      <Table columns={columns} dataSource={rows} rowKey="id" pagination={false} />
+      <Table columns={columns} dataSource={rows} rowKey="id" pagination={false} /> */}
     </PageCard>
   );
 }

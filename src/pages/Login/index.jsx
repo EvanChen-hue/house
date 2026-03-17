@@ -62,6 +62,8 @@ export default function Login() {
                 values.account,
                 values.password
               );
+              console.log(token, 'token');
+              
               setToken(token);
               saveLoginCred(values.account, values.password, {
                 rememberPassword: values.rememberPassword,

@@ -36,7 +36,7 @@ function unwrap(payload) {
 
 export const http = axios.create({
   timeout: 15000,
-  baseURL: 'https://requests.taiyang.chat',
+  baseURL: '/api',
 });
 
 http.interceptors.request.use((config) => {
@@ -45,7 +45,7 @@ http.interceptors.request.use((config) => {
   
   if (token) {
     config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers.Authorization = `${token}`;
   }
   return config;
 });
@@ -57,7 +57,7 @@ http.interceptors.response.use(
     const payload = error?.response?.data;
 
     if (status === 401) {
-      clearToken();
+      // clearToken();
       // Let UI decide how to navigate; avoids importing router in API layer.
       window?.dispatchEvent?.(new Event("hk:unauthorized"));
       return Promise.reject(new Error("登录已过期，请重新登录"));
