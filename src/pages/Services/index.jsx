@@ -166,6 +166,7 @@ export default function Services() {
           }
           setOpen(false);
           setEditing(null);
+          getData();
           // If we just created, jumping to page 1 will trigger reload via useEffect.
         }}
       />
