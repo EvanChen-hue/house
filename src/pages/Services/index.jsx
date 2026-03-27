@@ -23,8 +23,7 @@ export default function Services() {
   const [editing, setEditing] = useState(null);
 
   const getData = async () => {
-    console.log(222);
-    
+
     const res = await auntiesApi.list({ page: page.current, size: page.size });
 
     // Back-compat: if backend returns a plain array, still render it.
@@ -84,10 +83,11 @@ export default function Services() {
         dataIndex: "active",
         render: (_, record) => (
           <Switch
-            checked={record.active}
+            checked={record.status}
             onChange={async (checked) => {
-              await auntiesApi.update(record.id, { active: checked });
+              await auntiesApi.update(record.id, checked ? 1 : 0 );
               message.success(checked ? "已上架" : "已下架");
+              getData();
             }}
           />
         ),
@@ -110,7 +110,7 @@ export default function Services() {
         ),
       },
     ],
-    [message]
+    [message, page]
   );
 
   return (

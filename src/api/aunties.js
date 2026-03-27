@@ -91,16 +91,14 @@ export const auntiesApi = {
     );
   },
   update(id, patch) {
-    return requestOrMock(
-      () => {
-        const db = dbLoad();
-        const aunties = db.aunties.map((a) =>
-          a.id === id ? { ...a, ...patch } : a
-        );
-        dbSave({ ...db, aunties });
-        return true;
-      },
-      { url: `/aunties/${id}`, method: "PATCH", data: patch }
-    );
+    const from = new FormData();
+
+    from.append("id", id );
+    from.append("status", patch);
+    return request({
+      url: "/house/worker/update",
+      method: "put",
+      data: from,
+    });
   },
 };
