@@ -3,16 +3,23 @@ import { statsApi } from "@/api/index.js";
 import PageCard from "@/components/PageCard.jsx";
 import PageHeader from "@/components/PageHeader.jsx";
 import StatCard from "@/components/StatCard.jsx";
-import RevenueChart from "@/components/charts/RevenueChart.jsx";
+import OrderTrendChart from "@/components/charts/RevenueChart.jsx";
+
+const toMoney = (amount) => `¥ ${Number(amount || 0).toLocaleString("zh-CN")}`;
 
 export default function Dashboard() {
-  const [stats, setStats] = useState(null);
+  const [overview, setOverview] = useState(null);
+  const [trend, setTrend] = useState([]);
 
   useEffect(() => {
     let mounted = true;
-    statsApi.getDashboard().then((res) => {
-      if (mounted) setStats(res);
+
+    Promise.all([statsApi.getOverview(), statsApi.getTrend()]).then(([overviewRes, trendRes]) => {
+      if (!mounted) return;
+      setOverview(overviewRes || null);
+      setTrend(Array.isArray(trendRes) ? trendRes : []);
     });
+
     return () => {
       mounted = false;
     };
@@ -21,17 +28,19 @@ export default function Dashboard() {
   return (
     <PageCard>
       <PageHeader
-        title="收入统计大屏"
-        subtitle="按月收入趋势与关键运营指标（演示数据，已封装 API）"
+        title="首页核心指标"
+        subtitle="销售、订单与退款等关键数据概览"
       />
       <div className="hk-statGrid">
-        <StatCard label="本月收入" value={stats?.kpi.monthRevenue ?? "-"} hint="环比 +12%" />
-        <StatCard label="累计订单" value={stats?.kpi.totalOrders ?? "-"} hint="近 30 天活跃" />
-        <StatCard label="好评率" value={stats?.kpi.fiveStar ?? "-"} hint="持续稳定" />
-        <StatCard label="上架阿姨" value={stats?.kpi.activeAunties ?? "-"} hint="可接单人数" />
+        <StatCard label="总销售额" value={toMoney(overview?.totalSales)} />
+        <StatCard label="总订单数" value={overview?.totalOrders ?? 0} />
+        <StatCard label="今日销售额" value={toMoney(overview?.todaySales)} />
+        <StatCard label="今日订单数" value={overview?.todayOrders ?? 0} />
+        <StatCard label="退款金额" value={toMoney(overview?.refundAmount)} />
+        <StatCard label="待处理订单" value={overview?.pendingOrders ?? 0} />
       </div>
       <div className="hk-chartBox">
-        <RevenueChart data={stats?.revenueSeries ?? []} />
+        <OrderTrendChart data={trend} />
       </div>
     </PageCard>
   );

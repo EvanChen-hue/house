@@ -1,5 +1,6 @@
 import axios from "axios";
 import { clearToken, getToken } from "@/utils/storage.js";
+import { notifyError } from "@/utils/appMessage.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -31,7 +32,10 @@ function unwrap(payload) {
     throw err;
   }
   return payload.data ?? payload.result ?? null;
-  
+}
+
+function rejectWithToast(error, fallbackMessage) {
+  return Promise.reject(notifyError(error, fallbackMessage));
 }
 
 export const http = axios.create({
@@ -51,7 +55,13 @@ http.interceptors.request.use((config) => {
 });
 
 http.interceptors.response.use(
-  (response) => unwrap(response.data),
+  (response) => {
+    try {
+      return unwrap(response.data);
+    } catch (error) {
+      return rejectWithToast(error, "请求失败，请稍后再试");
+    }
+  },
   (error) => {
     const status = error?.response?.status;
     const payload = error?.response?.data;
@@ -60,23 +70,26 @@ http.interceptors.response.use(
       // clearToken();
       // Let UI decide how to navigate; avoids importing router in API layer.
       window?.dispatchEvent?.(new Event("hk:unauthorized"));
-      return Promise.reject(new Error("登录已过期，请重新登录"));
+      return rejectWithToast(new Error("登录已过期，请重新登录"));
     }
-    if (status === 403) return Promise.reject(new Error("无权限访问该资源"));
-    if (status === 404) return Promise.reject(new Error("接口不存在（404）"));
-    if (status >= 500) return Promise.reject(new Error("服务器异常，请稍后再试"));
+    if (status === 403) return rejectWithToast(new Error("无权限访问该资源"));
+    if (status === 404) return rejectWithToast(new Error("接口不存在（404）"));
+    if (status >= 500) return rejectWithToast(new Error("服务器异常，请稍后再试"));
 
     // Business envelope with non-ok code
     try {
       if (payload) unwrap(payload);
     } catch (e) {
-      return Promise.reject(e);
+      return rejectWithToast(e, "请求失败，请稍后再试");
     }
 
     if (error?.message?.includes("timeout")) {
-      return Promise.reject(new Error("请求超时，请检查网络"));
+      return rejectWithToast(new Error("请求超时，请检查网络"));
     }
-    return Promise.reject(new Error(error?.message || "网络异常，请稍后再试"));
+    return rejectWithToast(
+      new Error(error?.message || "网络异常，请稍后再试"),
+      "网络异常，请稍后再试"
+    );
   }
 );
 

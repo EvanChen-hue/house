@@ -22,6 +22,8 @@ export default function AuntieModal({ open, initialValue, onCancel, onOk }) {
 
   useEffect(() => {
     if (!open) return;
+    console.log(initialValue, '1313131');
+    
     form.setFieldsValue({
       name: initialValue?.name ?? "",
       categoryId: initialValue?.categoryId ?? "1",

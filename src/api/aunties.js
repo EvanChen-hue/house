@@ -54,10 +54,6 @@ export const auntiesApi = {
     const from = new FormData();
     console.log(payload,' payload');
 
-    if(typeof payload.avatarFile === "string"){
-      payload.avatarFile = await urlToFile(payload.avatarFile);
-    }
-    
     from.append("categoryId", payload.categoryId );
     from.append("id", payload.id );
     from.append("name", payload.name );

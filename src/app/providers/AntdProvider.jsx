@@ -1,4 +1,17 @@
+import { useEffect } from "react";
 import { ConfigProvider, App as AntdApp, theme } from "antd";
+import { setGlobalMessage } from "@/utils/appMessage.js";
+
+function MessageBridge() {
+  const { message } = AntdApp.useApp();
+
+  useEffect(() => {
+    setGlobalMessage(message);
+    return () => setGlobalMessage(null);
+  }, [message]);
+
+  return null;
+}
 
 export default function AntdProvider({ children }) {
   return (
@@ -35,7 +48,10 @@ export default function AntdProvider({ children }) {
         },
       }}
     >
-      <AntdApp>{children}</AntdApp>
+      <AntdApp>
+        <MessageBridge />
+        {children}
+      </AntdApp>
     </ConfigProvider>
   );
 }

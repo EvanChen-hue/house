@@ -11,6 +11,11 @@ const typeLabel = {
   2: "月嫂",
 };
 
+const truncateText = (text, max = 40) => {
+  if (!text) return "";
+  return text.length > max ? `${text.slice(0, max)}...` : text;
+};
+
 export default function Services() {
   const { message } = App.useApp();
   const [page, setPage] = useState({
@@ -48,15 +53,17 @@ export default function Services() {
     () => [
       {
         title: "阿姨",
+        maxWidth: 300,
+        width: 300,
         dataIndex: "name",
         render: (_, record) => (
-          <Space>
+          <Space width={200}>
             <Avatar size={46} src={'https://requests.taiyang.chat/' + record.avatar || undefined}>
               {record.name?.slice?.(0, 1) || "A"}
             </Avatar>
             <div>
               <div style={{ fontWeight: 650 }}>{record.name}</div>
-              <div style={{ color: "rgba(15,23,42,0.55)" }}>{record.intro}</div>
+              <div style={{ color: "rgba(15,23,42,0.55)" }}>{truncateText(record.intro, 40)}</div>
             </div>
           </Space>
         ),
@@ -99,9 +106,9 @@ export default function Services() {
           <Button
             icon={<EditOutlined />}
             onClick={() => {
+              record.avatarFile = record.avatar
               setEditing(record);
               console.log(record, 'editing');
-              record.avatarFile = record.avatar
               setOpen(true);
             }}
           >
@@ -173,3 +180,4 @@ export default function Services() {
     </PageCard>
   );
 }
+

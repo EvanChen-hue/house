@@ -11,6 +11,7 @@ import {
 } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authApi } from "@/api/index.js";
+import { isErrorNotified } from "@/utils/appMessage.js";
 import { getLoginCreds, saveLoginCred, setToken } from "@/utils/storage.js";
 import logoUrl from "@/assets/images/logo.svg";
 
@@ -46,7 +47,7 @@ export default function Login() {
           <img className="hk-loginLogo" src={logoUrl} alt="logo" />
           <div>
             <Typography.Title level={3} style={{ margin: 0 }}>
-              学习测试小程序管理后台
+              大拇指家政小程序管理后台
             </Typography.Title>
           </div>
         </div>
@@ -71,7 +72,9 @@ export default function Login() {
               message.success("登录成功");
               navigate(from, { replace: true });
             } catch (e) {
-              message.error(e?.message || "登录失败");
+              if (!isErrorNotified(e)) {
+                message.error(e?.message || "登录失败");
+              }
             } finally {
               setLoading(false);
             }

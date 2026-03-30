@@ -50,11 +50,97 @@ const seed = {
       photo: "",
     },
   ],
+  orders: [
+    {
+      id: "o1",
+      orderNo: "HK202603300001",
+      username: "李雨桐",
+      phone: "13822118899",
+      fullAddress: "浦东新区景和花园 3 栋 1202",
+      serviceStartDate: "2026-03-31 09:00:00",
+      totalAmount: 268,
+      payStatus: 1,
+      status: 2,
+      payType: 2,
+      createTime: "2026-03-30 10:20:00",
+      remark: "上门前请提前 10 分钟联系。",
+    },
+    {
+      id: "o2",
+      orderNo: "HK202603300002",
+      username: "陈子墨",
+      phone: "13900887766",
+      fullAddress: "徐汇区滨江湾 18 号楼 1802",
+      serviceStartDate: "2026-04-01 14:00:00",
+      totalAmount: 399,
+      payStatus: 0,
+      status: 1,
+      payType: 3,
+      createTime: "2026-03-30 11:05:00",
+      remark: "家中有宠物，注意关门。",
+    },
+    {
+      id: "o3",
+      orderNo: "HK202603300003",
+      username: "赵清欢",
+      phone: "13755661122",
+      fullAddress: "静安区中央广场 A 座 1608",
+      serviceStartDate: "2026-03-29 08:30:00",
+      totalAmount: 520,
+      payStatus: 1,
+      status: 4,
+      payType: 1,
+      createTime: "2026-03-28 16:48:00",
+      remark: "客户要求重点清洁厨房和卫生间。",
+    },
+    {
+      id: "o4",
+      orderNo: "HK202603300004",
+      username: "周以宁",
+      phone: "13688776655",
+      fullAddress: "长宁区虹桥路 998 弄 6 号 902",
+      serviceStartDate: "2026-03-30 13:00:00",
+      totalAmount: 188,
+      payStatus: 6,
+      status: 6,
+      payType: 2,
+      createTime: "2026-03-27 09:12:00",
+      remark: "退款审核中。",
+    },
+    {
+      id: "o5",
+      orderNo: "HK202603300005",
+      username: "沈书瑶",
+      phone: "13566778899",
+      fullAddress: "闵行区万源城朗郡 12 号楼 1501",
+      serviceStartDate: "2026-03-26 10:00:00",
+      totalAmount: 299,
+      payStatus: 2,
+      status: 5,
+      payType: 3,
+      createTime: "2026-03-25 18:20:00",
+      remark: "已退款，用户临时取消。",
+    },
+  ],
 };
+
+function withDefaults(current) {
+  return {
+    ...seed,
+    ...current,
+    users: current?.users ?? seed.users,
+    aunties: current?.aunties ?? seed.aunties,
+    orders: current?.orders ?? seed.orders,
+  };
+}
 
 export function dbLoad() {
   const current = storageGet(KEY);
-  if (current) return current;
+  if (current) {
+    const next = withDefaults(current);
+    storageSet(KEY, next);
+    return next;
+  }
   storageSet(KEY, seed);
   return seed;
 }
