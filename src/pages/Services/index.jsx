@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { App, Avatar, Button, Popconfirm, Space, Switch, Table, Tag } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import PageCard from "@/components/PageCard.jsx";
@@ -50,7 +50,7 @@ export default function Services() {
     getData();
   }, [page.current, page.size]);
 
-  const handleDelete = async (record) => {
+  const handleDelete = useCallback(async (record) => {
     try {
       setDeletingId(record.id);
       await auntiesApi.delete(record.id);
@@ -64,10 +64,11 @@ export default function Services() {
       await getData();
     } catch (error) {
       console.error("Delete worker error:", error);
+      message.error("删除失败");
     } finally {
       setDeletingId(null);
     }
-  };
+  }, [rows, page, message]);
 
   const columns = useMemo(
     () => [
