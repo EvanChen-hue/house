@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { App, Avatar, Button, Space, Switch, Table, Tag } from "antd";
-import { PlusOutlined, EditOutlined } from "@ant-design/icons";
+import { App, Avatar, Button, Popconfirm, Space, Table, Tag } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import PageCard from "@/components/PageCard.jsx";
 import PageHeader from "@/components/PageHeader.jsx";
 import AuntieModal from "@/components/forms/AuntieModal.jsx";
@@ -28,7 +28,6 @@ export default function Services() {
   const [editing, setEditing] = useState(null);
 
   const getData = async () => {
-
     const res = await auntiesApi.list({ page: page.current, size: page.size });
 
     // Back-compat: if backend returns a plain array, still render it.
@@ -42,8 +41,17 @@ export default function Services() {
     setPage((prev) => ({ ...prev, total: Number(res?.total) || 0 }));
   };
 
+  const handleDelete = async (id) => {
+    await auntiesApi.remove(id);
+    message.success("已删除");
 
-  
+    if (rows.length === 1 && page.current > 1) {
+      setPage((prev) => ({ ...prev, current: prev.current - 1 }));
+      return;
+    }
+
+    getData();
+  };
 
   useEffect(() => {
     getData();
@@ -86,45 +94,43 @@ export default function Services() {
         ),
       },
       {
-        title: "是否上架",
-        dataIndex: "active",
-        render: (_, record) => (
-          <Switch
-            checked={record.status}
-            onChange={async (checked) => {
-              await auntiesApi.update(record.id, checked ? 1 : 0 );
-              message.success(checked ? "已上架" : "已下架");
-              getData();
-            }}
-          />
-        ),
-      },
-      {
         title: "操作",
-        width: 120,
+        width: 180,
         render: (_, record) => (
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => {
-              record.avatarFile = record.avatar
-              setEditing(record);
-              console.log(record, 'editing');
-              setOpen(true);
-            }}
-          >
-            编辑
-          </Button>
+          <Space>
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => {
+                record.avatarFile = record.avatar;
+                setEditing(record);
+                console.log(record, "editing");
+                setOpen(true);
+              }}
+            >
+              编辑
+            </Button>
+            <Popconfirm
+              title="确认删除该阿姨吗？"
+              okText="删除"
+              cancelText="取消"
+              onConfirm={() => handleDelete(record.id)}
+            >
+              <Button danger icon={<DeleteOutlined />}>
+                删除
+              </Button>
+            </Popconfirm>
+          </Space>
         ),
       },
     ],
-    [message, page]
+    [page, rows.length]
   );
 
   return (
     <PageCard>
       <PageHeader
         title="服务管理"
-        subtitle="支持上架开关与新增编辑弹窗"
+        subtitle="支持新增、编辑与删除阿姨信息"
         extra={
           <Button
             type="primary"
