@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { App, Avatar, Button, Space, Switch, Table, Tag } from "antd";
-import { PlusOutlined, EditOutlined } from "@ant-design/icons";
+import { App, Avatar, Button, Popconfirm, Space, Switch, Table, Tag } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import PageCard from "@/components/PageCard.jsx";
 import PageHeader from "@/components/PageHeader.jsx";
 import AuntieModal from "@/components/forms/AuntieModal.jsx";
@@ -94,19 +94,39 @@ export default function Services() {
       },
       {
         title: "操作",
-        width: 120,
+        width: 160,
         render: (_, record) => (
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => {
-              setEditing(record);
-              console.log(record, 'editing');
-              record.avatarFile = record.avatar
-              setOpen(true);
-            }}
-          >
-            编辑
-          </Button>
+          <Space>
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => {
+                setEditing(record);
+                console.log(record, 'editing');
+                record.avatarFile = record.avatar
+                setOpen(true);
+              }}
+            >
+              编辑
+            </Button>
+            <Popconfirm
+              title="确认删除该阿姨吗？"
+              okText="确认"
+              cancelText="取消"
+              onConfirm={async () => {
+                try {
+                  await auntiesApi.remove(record.id);
+                  message.success("已删除");
+                  getData();
+                } catch (e) {
+                  message.error(e?.message || "删除失败，请稍后再试");
+                }
+              }}
+            >
+              <Button danger icon={<DeleteOutlined />}>
+                删除
+              </Button>
+            </Popconfirm>
+          </Space>
         ),
       },
     ],

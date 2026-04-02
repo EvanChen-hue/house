@@ -101,4 +101,10 @@ export const auntiesApi = {
       data: from,
     });
   },
+  remove(id) {
+    return request({
+      url: `/house/worker/delete/${id}`,
+      method: "DELETE",
+    });
+  },
 };
