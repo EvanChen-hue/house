@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { App, Avatar, Button, Space, Switch, Table, Tag } from "antd";
-import { PlusOutlined, EditOutlined } from "@ant-design/icons";
+import { App, Avatar, Button, Popconfirm, Space, Switch, Table, Tag } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import PageCard from "@/components/PageCard.jsx";
 import PageHeader from "@/components/PageHeader.jsx";
 import AuntieModal from "@/components/forms/AuntieModal.jsx";
@@ -26,6 +26,7 @@ export default function Services() {
   const [rows, setRows] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const getData = async () => {
 
@@ -48,6 +49,25 @@ export default function Services() {
   useEffect(() => {
     getData();
   }, [page.current, page.size]);
+
+  const handleDelete = async (record) => {
+    try {
+      setDeletingId(record.id);
+      await auntiesApi.delete(record.id);
+      message.success("删除成功");
+
+      if (rows.length === 1 && page.current > 1) {
+        setPage((prev) => ({ ...prev, current: prev.current - 1 }));
+        return;
+      }
+
+      await getData();
+    } catch (error) {
+      console.error("Delete worker error:", error);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const columns = useMemo(
     () => [
@@ -101,23 +121,39 @@ export default function Services() {
       },
       {
         title: "操作",
-        width: 120,
+        width: 160,
         render: (_, record) => (
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => {
-              record.avatarFile = record.avatar
-              setEditing(record);
-              console.log(record, 'editing');
-              setOpen(true);
-            }}
-          >
-            编辑
-          </Button>
+          <Space>
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => {
+                record.avatarFile = record.avatar
+                setEditing(record);
+                console.log(record, 'editing');
+                setOpen(true);
+              }}
+            >
+              编辑
+            </Button>
+            <Popconfirm
+              title="确认删除该阿姨吗？"
+              okText="删除"
+              cancelText="取消"
+              onConfirm={() => handleDelete(record)}
+            >
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                loading={deletingId === record.id}
+              >
+                删除
+              </Button>
+            </Popconfirm>
+          </Space>
         ),
       },
     ],
-    [message, page]
+    [message, page, deletingId, handleDelete]
   );
 
   return (
