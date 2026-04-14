@@ -28,7 +28,7 @@ export default function AppLayout() {
         <div className="hk-brand" onClick={() => navigate("/")}>
           <img className="hk-logo" src={logoUrl} alt="logo" />
           <div className="hk-brandText">
-            <div className="hk-brandTitle">大拇指家政管理后台</div>
+            <div className="hk-brandTitle">测试后台</div>
             <div className="hk-brandSub">Housekeeping Admin</div>
           </div>
         </div>

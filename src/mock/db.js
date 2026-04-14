@@ -122,6 +122,48 @@ const seed = {
       remark: "已退款，用户临时取消。",
     },
   ],
+  contents: [
+    {
+      id: "c1",
+      category: "热门推荐",
+      name: "深度清洁",
+      sales: 328,
+      intro: "全屋深度清洁，包含厨房油污和卫生间死角处理。",
+      posterImage:
+        "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&w=500&q=80",
+      detailImage:
+        "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=500&q=80",
+      comments: [
+        { star: 5, content: "阿姨很专业，清洁特别仔细。" },
+        { star: 4, content: "上门准时，整体体验不错。" },
+      ],
+      regions: ["顺庆区", "高坪区"],
+      originalPrice: 199,
+      discountPrice: 149,
+      specs: [
+        { name: "4小时", price: 149 },
+        { name: "6小时", price: 219 },
+      ],
+      createdAt: "2026-04-10 10:00:00",
+    },
+    {
+      id: "c2",
+      category: "家庭清洁",
+      name: "厨房整理",
+      sales: 164,
+      intro: "厨房收纳整理+台面深度清洁，适合日常维护。",
+      posterImage:
+        "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?auto=format&fit=crop&w=500&q=80",
+      detailImage:
+        "https://images.unsplash.com/photo-1556911220-bda9f7f7597e?auto=format&fit=crop&w=500&q=80",
+      comments: [{ star: 5, content: "整理完看着太舒服了。" }],
+      regions: ["嘉陵区", "南部县"],
+      originalPrice: 129,
+      discountPrice: 99,
+      specs: [{ name: "2小时", price: 99 }],
+      createdAt: "2026-04-11 13:20:00",
+    },
+  ],
 };
 
 function withDefaults(current) {
@@ -131,6 +173,7 @@ function withDefaults(current) {
     users: current?.users ?? seed.users,
     aunties: current?.aunties ?? seed.aunties,
     orders: current?.orders ?? seed.orders,
+    contents: current?.contents ?? seed.contents,
   };
 }
 

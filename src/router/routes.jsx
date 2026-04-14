@@ -1,13 +1,15 @@
-import {
+﻿import {
   BarChartOutlined,
   TeamOutlined,
   SolutionOutlined,
   ShoppingCartOutlined,
+  AppstoreOutlined,
 } from "@ant-design/icons";
 import Dashboard from "@/pages/Dashboard/index.jsx";
 import Users from "@/pages/Users/index.jsx";
 import Services from "@/pages/Services/index.jsx";
 import Orders from "@/pages/Orders/index.jsx";
+import Content from "@/pages/Content/index.jsx";
 
 export const nav = [
   {
@@ -34,6 +36,12 @@ export const nav = [
     label: "订单管理",
     icon: <ShoppingCartOutlined />,
   },
+  {
+    key: "content",
+    path: "/content",
+    label: "内容管理",
+    icon: <AppstoreOutlined />,
+  },
 ];
 
 export const routes = [
@@ -51,4 +59,11 @@ export const routes = [
     title: "订单管理",
     fullPath: "/orders",
   },
+  {
+    path: "content",
+    element: <Content />,
+    title: "内容管理",
+    fullPath: "/content",
+  },
 ];
+

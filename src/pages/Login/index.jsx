@@ -47,7 +47,7 @@ export default function Login() {
           <img className="hk-loginLogo" src={logoUrl} alt="logo" />
           <div>
             <Typography.Title level={3} style={{ margin: 0 }}>
-              大拇指家政小程序管理后台
+              测试后台
             </Typography.Title>
           </div>
         </div>
