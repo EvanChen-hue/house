@@ -3,6 +3,10 @@ import { storageGet, storageSet } from "@/utils/storage.js";
 const KEY = "hk_admin_db_v1";
 
 const seed = {
+  categories: [
+    { name: "热门推荐", createdAt: "2026-04-10 10:00:00" },
+    { name: "家庭清洁", createdAt: "2026-04-11 13:20:00" },
+  ],
   users: [
     {
       id: "u1",
@@ -170,6 +174,7 @@ function withDefaults(current) {
   return {
     ...seed,
     ...current,
+    categories: current?.categories ?? seed.categories,
     users: current?.users ?? seed.users,
     aunties: current?.aunties ?? seed.aunties,
     orders: current?.orders ?? seed.orders,

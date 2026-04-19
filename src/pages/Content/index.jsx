@@ -1,81 +1,30 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import {
   App,
   Button,
+  Descriptions,
   Form,
   Image,
   Input,
   InputNumber,
   Modal,
   Popconfirm,
-  Rate,
-  Select,
   Space,
   Table,
-  Tag,
   Upload,
 } from "antd";
-import {
-  DeleteOutlined,
-  EditOutlined,
-  PlusOutlined,
-  UploadOutlined,
-} from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, PlusOutlined, UploadOutlined } from "@ant-design/icons";
 import PageCard from "@/components/PageCard.jsx";
 import PageHeader from "@/components/PageHeader.jsx";
 import { contentApi } from "@/api/content.js";
-
-const AREA_OPTIONS = [
-  "顺庆区",
-  "高坪区",
-  "嘉陵区",
-  "南部县",
-  "营山县",
-  "蓬安县",
-  "仪陇县",
-  "西充县",
-  "阆中市",
-].map((name) => ({ label: name, value: name }));
 
 const normalizeUpload = (event) => {
   if (Array.isArray(event)) return event;
   return event?.fileList || [];
 };
 
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = (error) => reject(error);
-  });
-}
-
-async function getUploadUrl(fileItem) {
-  if (!fileItem) return "";
-  if (fileItem.url) return fileItem.url;
-  if (fileItem.originFileObj) return fileToDataUrl(fileItem.originFileObj);
-  return "";
-}
-
-function toUploadList(url, uidPrefix) {
-  if (!url) return [];
-  return [{ uid: `${uidPrefix}-1`, name: `${uidPrefix}.png`, status: "done", url }];
-}
-
-function makeEmptyPackage() {
-  return {
-    name: "",
-    sales: 0,
-    intro: "",
-    posterFileList: [],
-    detailFileList: [],
-    comments: [{ star: 5, content: "" }],
-    regions: [],
-    originalPrice: 0,
-    discountPrice: 0,
-    specs: [{ name: "", price: 0 }],
-  };
+function getUploadFile(fileList) {
+  return fileList?.[0]?.originFileObj || null;
 }
 
 export default function Content() {
@@ -85,20 +34,25 @@ export default function Content() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const [openCreateCategoryModal, setOpenCreateCategoryModal] = useState(false);
+  const [createCategoryForm] = Form.useForm();
   const [openCategoryModal, setOpenCategoryModal] = useState(false);
   const [categoryForm] = Form.useForm();
-  const [categoryOriginalName, setCategoryOriginalName] = useState("");
-  const [categoryPackages, setCategoryPackages] = useState([]);
-  const [categoryPackagePage, setCategoryPackagePage] = useState({ current: 1, size: 5 });
-
-  const [openPackageModal, setOpenPackageModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [openPackageListModal, setOpenPackageListModal] = useState(false);
+  const [packageRows, setPackageRows] = useState([]);
+  const [packageLoading, setPackageLoading] = useState(false);
+  const [packagePage, setPackagePage] = useState({ current: 1, size: 10, total: 0 });
+  const [currentCategory, setCurrentCategory] = useState(null);
+  const [openPackageFormModal, setOpenPackageFormModal] = useState(false);
   const [packageForm] = Form.useForm();
-  const [editingPackageId, setEditingPackageId] = useState(null);
-
-  const categoryPackageRows = useMemo(() => {
-    const start = (categoryPackagePage.current - 1) * categoryPackagePage.size;
-    return categoryPackages.slice(start, start + categoryPackagePage.size);
-  }, [categoryPackages, categoryPackagePage.current, categoryPackagePage.size]);
+  const [openPackageDetailModal, setOpenPackageDetailModal] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState(null);
+  const [reviewRows, setReviewRows] = useState([]);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewPage, setReviewPage] = useState({ current: 1, size: 10, total: 0 });
+  const [specRows, setSpecRows] = useState([]);
+  const [specLoading, setSpecLoading] = useState(false);
 
   const loadCategories = async (nextCurrent = page.current, nextSize = page.size) => {
     try {
@@ -121,24 +75,105 @@ export default function Content() {
   }, [page.current, page.size]);
 
   const handleOpenCreateCategory = () => {
-    setCategoryOriginalName("");
-    setCategoryPackages([]);
-    setCategoryPackagePage({ current: 1, size: 5 });
-    categoryForm.setFieldsValue({ category: "" });
-    setOpenCategoryModal(true);
+    createCategoryForm.resetFields();
+    setOpenCreateCategoryModal(true);
   };
 
   const handleOpenEditCategory = async (record) => {
-    const detail = await contentApi.getCategoryDetail(record.category);
-    setCategoryOriginalName(record.category);
-    setCategoryPackages(detail?.packages || []);
-    setCategoryPackagePage({ current: 1, size: 5 });
-    categoryForm.setFieldsValue({ category: record.category });
+    setEditingCategory(record);
+    categoryForm.setFieldsValue({ category: record.name || record.category || "" });
     setOpenCategoryModal(true);
   };
 
+  const loadPackages = async (
+    category,
+    nextCurrent = packagePage.current,
+    nextSize = packagePage.size
+  ) => {
+    if (!category?.id) {
+      setPackageRows([]);
+      setPackagePage((prev) => ({ ...prev, total: 0 }));
+      return;
+    }
+
+    try {
+      setPackageLoading(true);
+      const res = await contentApi.listPackages({
+        categoryId: category.id,
+        page: nextCurrent,
+        pageSize: nextSize,
+      });
+      setPackageRows(res?.records || []);
+      setPackagePage({
+        current: Number(res?.current) || nextCurrent,
+        size: Number(res?.size) || nextSize,
+        total: Number(res?.total) || 0,
+      });
+    } finally {
+      setPackageLoading(false);
+    }
+  };
+
+  const loadReviews = async (pkg, nextCurrent = reviewPage.current, nextSize = reviewPage.size) => {
+    if (!pkg?.id) {
+      setReviewRows([]);
+      return;
+    }
+
+    try {
+      setReviewLoading(true);
+      const res = await contentApi.listReviews({
+        packageId: pkg.id,
+        page: nextCurrent,
+        pageSize: nextSize,
+      });
+      setReviewRows(res?.records || []);
+      setReviewPage({
+        current: Number(res?.current) || nextCurrent,
+        size: Number(res?.size) || nextSize,
+        total: Number(res?.total) || 0,
+      });
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const loadSpecs = async (pkg) => {
+    if (!pkg?.id) {
+      setSpecRows([]);
+      return;
+    }
+
+    try {
+      setSpecLoading(true);
+      const list = await contentApi.listPackageSpecs(pkg.id);
+      setSpecRows(list);
+    } finally {
+      setSpecLoading(false);
+    }
+  };
+
+  const handleOpenPackageModal = async (record) => {
+    setCurrentCategory(record);
+    setOpenPackageListModal(true);
+    setPackagePage({ current: 1, size: 10, total: 0 });
+    await loadPackages(record, 1, 10);
+  };
+
+  const handleOpenCreatePackage = () => {
+    packageForm.resetFields();
+    setOpenPackageFormModal(true);
+  };
+
+  const handleOpenPackageDetail = async (record) => {
+    setSelectedPackage(record);
+    setOpenPackageDetailModal(true);
+    setReviewPage({ current: 1, size: 10, total: 0 });
+    await Promise.all([loadReviews(record, 1, 10), loadSpecs(record)]);
+  };
+
   const handleRemoveCategory = async (record) => {
-    await contentApi.removeCategory(record.category);
+    await contentApi.removeCategory(record.id);
     message.success("大类删除成功");
     if (rows.length === 1 && page.current > 1) {
       setPage((prev) => ({ ...prev, current: prev.current - 1 }));
@@ -147,66 +182,18 @@ export default function Content() {
     loadCategories(page.current, page.size);
   };
 
-  const openCreatePackage = () => {
-    setEditingPackageId(null);
-    packageForm.setFieldsValue(makeEmptyPackage());
-    setOpenPackageModal(true);
-  };
+  const handleCreateCategory = async ({ name }) => {
+    await contentApi.addCategory(name);
+    message.success("大类添加成功");
+    setOpenCreateCategoryModal(false);
+    createCategoryForm.resetFields();
 
-  const openEditPackage = (record) => {
-    setEditingPackageId(record.id);
-    packageForm.setFieldsValue({
-      name: record.name,
-      sales: record.sales,
-      intro: record.intro,
-      posterFileList: toUploadList(record.posterImage, "poster"),
-      detailFileList: toUploadList(record.detailImage, "detail"),
-      comments: (record.comments || []).length ? record.comments : [{ star: 5, content: "" }],
-      regions: record.regions || [],
-      originalPrice: record.originalPrice,
-      discountPrice: record.discountPrice,
-      specs: (record.specs || []).length ? record.specs : [{ name: "", price: 0 }],
-    });
-    setOpenPackageModal(true);
-  };
+    if (page.current !== 1) {
+      setPage((prev) => ({ ...prev, current: 1 }));
+      return;
+    }
 
-  const handleSavePackage = async (values) => {
-    const posterImage = await getUploadUrl(values.posterFileList?.[0]);
-    const detailImage = await getUploadUrl(values.detailFileList?.[0]);
-
-    const payload = {
-      id: editingPackageId || `tmp-${Date.now()}`,
-      name: values.name,
-      sales: Number(values.sales) || 0,
-      intro: values.intro,
-      posterImage,
-      detailImage,
-      comments: (values.comments || []).map((item) => ({
-        star: Number(item.star) || 5,
-        content: item.content,
-      })),
-      regions: values.regions || [],
-      originalPrice: Number(values.originalPrice) || 0,
-      discountPrice: Number(values.discountPrice) || 0,
-      specs: (values.specs || []).map((item) => ({
-        name: item.name,
-        price: Number(item.price) || 0,
-      })),
-    };
-
-    setCategoryPackages((prev) => {
-      if (!editingPackageId) return [payload, ...prev];
-      return prev.map((item) => (item.id === editingPackageId ? { ...item, ...payload } : item));
-    });
-
-    setOpenPackageModal(false);
-    setEditingPackageId(null);
-    message.success(editingPackageId ? "套餐包已更新" : "套餐包已新增");
-  };
-
-  const handleRemovePackage = (record) => {
-    setCategoryPackages((prev) => prev.filter((item) => item.id !== record.id));
-    message.success("套餐包已删除");
+    loadCategories(page.current, page.size);
   };
 
   const handleSaveCategory = async ({ category }) => {
@@ -215,57 +202,77 @@ export default function Content() {
       message.warning("请输入大类名称");
       return;
     }
-    if (!categoryPackages.length) {
-      message.warning("请至少添加一个套餐包");
+
+    if (!editingCategory?.id) {
+      message.warning("未找到待编辑的大类");
       return;
     }
 
-    await contentApi.saveCategory({
-      originalCategory: categoryOriginalName,
-      category: categoryName,
-      packages: categoryPackages,
+    await contentApi.updateCategory({
+      id: editingCategory.id,
+      name: categoryName,
     });
 
-    message.success(categoryOriginalName ? "大类已更新" : "大类已创建");
+    message.success("大类已更新");
     setOpenCategoryModal(false);
-    setCategoryOriginalName("");
-    setCategoryPackages([]);
+    setEditingCategory(null);
+    categoryForm.resetFields();
+    loadCategories(page.current, page.size);
+  };
 
-    if (!categoryOriginalName && page.current !== 1) {
-      setPage((prev) => ({ ...prev, current: 1 }));
+  const handleCreatePackage = async (values) => {
+    if (!currentCategory?.id) {
+      message.warning("未找到所属大类");
       return;
     }
-    loadCategories(page.current, page.size);
+
+    const posterFile = getUploadFile(values.posterFile);
+    const detailFiles = getUploadFile(values.detailFiles);
+
+    if (!posterFile || !detailFiles) {
+      message.warning("请上传封面图和详情图");
+      return;
+    }
+
+    await contentApi.addPackage({
+      categoryId: currentCategory.id,
+      posterFile,
+      detailFiles,
+      name: String(values.name || "").trim(),
+      description: String(values.description || "").trim(),
+      originalPrice: Number(values.originalPrice) || 0,
+      price: Number(values.price) || 0,
+      salesVolume: Number(values.salesVolume) || 0,
+      serviceArea: String(values.serviceArea || "").trim(),
+      status: 1,
+    });
+
+    message.success("套餐包添加成功");
+    setOpenPackageFormModal(false);
+    packageForm.resetFields();
+    loadPackages(currentCategory, packagePage.current, packagePage.size);
   };
 
   const categoryColumns = [
     {
       title: "大类名称",
       dataIndex: "category",
-      width: 220,
-    },
-    {
-      title: "套餐包数量",
-      dataIndex: "packageCount",
-      width: 120,
-      render: (value) => `${value || 0} 个`,
-    },
-    {
-      title: "总销量",
-      dataIndex: "totalSales",
-      width: 120,
+      width: 580,
     },
     {
       title: "操作",
       key: "action",
-      width: 180,
+      width: 260,
       render: (_, record) => (
         <Space>
           <Button type="link" icon={<EditOutlined />} onClick={() => handleOpenEditCategory(record)}>
             编辑
           </Button>
+          <Button type="link" onClick={() => handleOpenPackageModal(record)}>
+            管理套餐包
+          </Button>
           <Popconfirm
-            title="删除大类后，下面所有套餐包都会删除，确定继续吗？"
+            title="确定删除这个大类吗？"
             okText="删除"
             cancelText="取消"
             onConfirm={() => handleRemoveCategory(record)}
@@ -281,80 +288,76 @@ export default function Content() {
 
   const packageColumns = [
     {
-      title: "套餐",
+      title: "套餐包名称",
       dataIndex: "name",
-      width: 240,
-      render: (_, record) => (
-        <Space>
-          <Image width={64} height={40} src={record.posterImage} fallback="" style={{ objectFit: "cover" }} />
-          <div>
-            <div style={{ fontWeight: 600 }}>{record.name || "-"}</div>
-            <div style={{ color: "rgba(15,23,42,0.55)" }}>{record.intro || "-"}</div>
-          </div>
-        </Space>
-      ),
+      width: 220,
+    },
+    {
+      title: "现价",
+      dataIndex: "price",
+      width: 120,
+      render: (value) => `¥${Number(value) || 0}`,
+    },
+    {
+      title: "原价",
+      dataIndex: "originalPrice",
+      width: 120,
+      render: (value) => `¥${Number(value) || 0}`,
     },
     {
       title: "销量",
-      dataIndex: "sales",
-      width: 80,
+      dataIndex: "salesVolume",
+      width: 100,
     },
     {
       title: "服务地区",
-      dataIndex: "regions",
-      width: 220,
-      render: (regions) => (
-        <Space wrap>
-          {(regions || []).map((item) => (
-            <Tag key={item}>{item}</Tag>
-          ))}
-        </Space>
-      ),
-    },
-    {
-      title: "价格",
-      width: 150,
-      render: (_, record) => (
-        <div>
-          <div>原价: ¥{record.originalPrice || 0}</div>
-          <div style={{ color: "#cf1322" }}>优惠: ¥{record.discountPrice || 0}</div>
-        </div>
-      ),
-    },
-    {
-      title: "规格",
-      dataIndex: "specs",
-      width: 80,
-      render: (specs) => `${specs?.length || 0} 条`,
-    },
-    {
-      title: "评论",
-      dataIndex: "comments",
-      width: 80,
-      render: (comments) => `${comments?.length || 0} 条`,
+      dataIndex: "serviceArea",
+      width: 180,
     },
     {
       title: "操作",
       key: "action",
-      width: 160,
-      fixed: "right",
+      width: 120,
       render: (_, record) => (
-        <Space>
-          <Button type="link" onClick={() => openEditPackage(record)}>
-            编辑
-          </Button>
-          <Popconfirm
-            title="确定删除这个套餐包吗？"
-            okText="删除"
-            cancelText="取消"
-            onConfirm={() => handleRemovePackage(record)}
-          >
-            <Button type="link" danger>
-              删除
-            </Button>
-          </Popconfirm>
-        </Space>
+        <Button type="link" onClick={() => handleOpenPackageDetail(record)}>
+          编辑
+        </Button>
       ),
+    },
+  ];
+
+  const reviewColumns = [
+    {
+      title: "访客名",
+      dataIndex: "visitorName",
+      width: 120,
+    },
+    {
+      title: "评分",
+      dataIndex: "rating",
+      width: 80,
+    },
+    {
+      title: "评论内容",
+      dataIndex: "content",
+    },
+    {
+      title: "创建时间",
+      dataIndex: "createTime",
+      width: 180,
+    },
+  ];
+
+  const specColumns = [
+    {
+      title: "规格名称",
+      dataIndex: "specName",
+    },
+    {
+      title: "价格",
+      dataIndex: "price",
+      width: 140,
+      render: (value) => `¥${Number(value) || 0}`,
     },
   ];
 
@@ -362,7 +365,7 @@ export default function Content() {
     <PageCard>
       <PageHeader
         title="内容管理"
-        subtitle="列表仅显示大类，编辑大类时维护其下全部套餐包"
+        subtitle="当前页面仅维护大类名称"
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreateCategory}>
             新增大类
@@ -371,7 +374,7 @@ export default function Content() {
       />
 
       <Table
-        rowKey="category"
+        rowKey="id"
         columns={categoryColumns}
         dataSource={rows}
         loading={loading}
@@ -385,15 +388,48 @@ export default function Content() {
       />
 
       <Modal
-        width={1100}
-        open={openCategoryModal}
-        title={categoryOriginalName ? "编辑大类" : "新增大类"}
-        okText="保存大类"
+        width={480}
+        open={openCreateCategoryModal}
+        title="新增大类"
+        okText="保存"
         cancelText="取消"
+        destroyOnClose
+        onCancel={() => {
+          setOpenCreateCategoryModal(false);
+          createCategoryForm.resetFields();
+        }}
+        onOk={() => createCategoryForm.submit()}
+      >
+        <Form
+          form={createCategoryForm}
+          layout="vertical"
+          onFinish={handleCreateCategory}
+          onFinishFailed={() => message.warning("请输入大类名称")}
+        >
+          <Form.Item
+            label="大类名称"
+            name="name"
+            rules={[
+              { required: true, message: "请输入大类名称" },
+              { whitespace: true, message: "请输入大类名称" },
+            ]}
+          >
+            <Input placeholder="例如：热门推荐" maxLength={20} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        width={480}
+        open={openCategoryModal}
+        title="编辑大类"
+        okText="保存"
+        cancelText="取消"
+        destroyOnClose
         onCancel={() => {
           setOpenCategoryModal(false);
-          setCategoryOriginalName("");
-          setCategoryPackages([]);
+          setEditingCategory(null);
+          categoryForm.resetFields();
         }}
         onOk={() => categoryForm.submit()}
       >
@@ -401,93 +437,152 @@ export default function Content() {
           <Form.Item
             label="大类名称"
             name="category"
-            rules={[{ required: true, message: "请输入大类名称" }]}
+            rules={[
+              { required: true, message: "请输入大类名称" },
+              { whitespace: true, message: "请输入大类名称" },
+            ]}
           >
             <Input placeholder="例如：热门推荐" />
           </Form.Item>
         </Form>
+      </Modal>
 
+      <Modal
+        width={900}
+        open={openPackageListModal}
+        title={currentCategory ? `${currentCategory.category} - 管理套餐包` : "管理套餐包"}
+        okButtonProps={{ style: { display: "none" } }}
+        cancelText="关闭"
+        onCancel={() => {
+          setOpenPackageListModal(false);
+          setCurrentCategory(null);
+          setPackageRows([]);
+          setPackagePage({ current: 1, size: 10, total: 0 });
+        }}
+      >
         <div style={{ marginBottom: 12 }}>
-          <Button type="dashed" icon={<PlusOutlined />} onClick={openCreatePackage}>
-            新增套餐包
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreatePackage}>
+            添加套餐包
           </Button>
         </div>
 
         <Table
           rowKey="id"
           columns={packageColumns}
-          dataSource={categoryPackageRows}
-          locale={{ emptyText: "当前大类还没有套餐包，请先新增" }}
-          scroll={{ x: 1100 }}
+          dataSource={packageRows}
+          loading={packageLoading}
           pagination={{
-            current: categoryPackagePage.current,
-            pageSize: categoryPackagePage.size,
-            total: categoryPackages.length,
+            current: packagePage.current,
+            pageSize: packagePage.size,
+            total: packagePage.total,
             showSizeChanger: true,
-            onChange: (current, size) => setCategoryPackagePage({ current, size }),
+            onChange: (current, pageSize) => loadPackages(currentCategory, current, pageSize),
           }}
+          locale={{ emptyText: "当前暂无套餐包" }}
         />
       </Modal>
 
       <Modal
-        width={900}
-        open={openPackageModal}
-        title={editingPackageId ? "编辑套餐包" : "新增套餐包"}
-        okText="保存套餐包"
+        width={720}
+        open={openPackageFormModal}
+        title="添加套餐包"
+        okText="保存"
         cancelText="取消"
         destroyOnClose
         onCancel={() => {
-          setOpenPackageModal(false);
-          setEditingPackageId(null);
+          setOpenPackageFormModal(false);
+          packageForm.resetFields();
         }}
         onOk={() => packageForm.submit()}
       >
         <Form
           form={packageForm}
           layout="vertical"
-          onFinish={handleSavePackage}
-          onFinishFailed={() => message.warning("请先完善套餐包必填项")}
-          initialValues={makeEmptyPackage()}
+          onFinish={handleCreatePackage}
+          onFinishFailed={() => message.warning("请完善套餐包信息")}
         >
-          <Space size={16} style={{ width: "100%" }} align="start">
+          <Form.Item
+            label="套餐包名称"
+            name="name"
+            rules={[
+              { required: true, message: "请输入套餐包名称" },
+              { whitespace: true, message: "请输入套餐包名称" },
+            ]}
+          >
+            <Input placeholder="例如：深度保洁套餐" maxLength={30} />
+          </Form.Item>
+
+          <Form.Item
+            label="套餐描述"
+            name="description"
+            rules={[
+              { required: true, message: "请输入套餐描述" },
+              { whitespace: true, message: "请输入套餐描述" },
+            ]}
+          >
+            <Input.TextArea rows={4} placeholder="请填写套餐描述" maxLength={300} />
+          </Form.Item>
+
+          <Space style={{ width: "100%" }} size={16} align="start">
             <Form.Item
-              label="套餐包名称"
-              name="name"
+              label="原价"
+              name="originalPrice"
               style={{ flex: 1 }}
-              rules={[{ required: true, message: "请输入套餐包名称" }]}
+              rules={[{ required: true, message: "请输入原价" }]}
             >
-              <Input placeholder="例如：深度清洁" />
+              <InputNumber min={0} precision={2} style={{ width: "100%" }} />
             </Form.Item>
+
+            <Form.Item
+              label="现价"
+              name="price"
+              style={{ flex: 1 }}
+              rules={[{ required: true, message: "请输入现价" }]}
+            >
+              <InputNumber min={0} precision={2} style={{ width: "100%" }} />
+            </Form.Item>
+          </Space>
+
+          <Space style={{ width: "100%" }} size={16} align="start">
             <Form.Item
               label="销量"
-              name="sales"
-              style={{ width: 160 }}
+              name="salesVolume"
+              style={{ flex: 1 }}
               rules={[{ required: true, message: "请输入销量" }]}
             >
               <InputNumber min={0} style={{ width: "100%" }} />
             </Form.Item>
+
+            <Form.Item
+              label="服务地区"
+              name="serviceArea"
+              style={{ flex: 1 }}
+              rules={[
+                { required: true, message: "请输入服务地区" },
+                { whitespace: true, message: "请输入服务地区" },
+              ]}
+            >
+              <Input placeholder="例如：上海市全境" />
+            </Form.Item>
           </Space>
 
-          <Form.Item label="简介" name="intro" rules={[{ required: true, message: "请输入简介" }]}>
-            <Input.TextArea rows={3} placeholder="请填写套餐包简介" />
-          </Form.Item>
-
-          <Space size={16} style={{ width: "100%" }} align="start">
+          <Space style={{ width: "100%" }} size={16} align="start">
             <Form.Item
-              label="海报图片"
-              name="posterFileList"
+              label="封面图片"
+              name="posterFile"
               valuePropName="fileList"
               getValueFromEvent={normalizeUpload}
               style={{ flex: 1 }}
-              rules={[{ required: true, message: "请上传海报图片" }]}
+              rules={[{ required: true, message: "请上传封面图片" }]}
             >
               <Upload listType="picture" maxCount={1} beforeUpload={() => false}>
-                <Button icon={<UploadOutlined />}>上传海报</Button>
+                <Button icon={<UploadOutlined />}>上传封面图</Button>
               </Upload>
             </Form.Item>
+
             <Form.Item
-              label="详情图片（仅1张）"
-              name="detailFileList"
+              label="详情图片"
+              name="detailFiles"
               valuePropName="fileList"
               getValueFromEvent={normalizeUpload}
               style={{ flex: 1 }}
@@ -498,134 +593,65 @@ export default function Content() {
               </Upload>
             </Form.Item>
           </Space>
-
-          <Form.Item
-            label="服务地区（南充三区六县）"
-            name="regions"
-            rules={[{ required: true, message: "请选择服务地区" }]}
-          >
-            <Select mode="multiple" options={AREA_OPTIONS} maxTagCount="responsive" />
-          </Form.Item>
-
-          <Space size={16} style={{ width: "100%" }} align="start">
-            <Form.Item
-              label="原价"
-              name="originalPrice"
-              style={{ flex: 1 }}
-              rules={[{ required: true, message: "请输入原价" }]}
-            >
-              <InputNumber min={0} precision={2} style={{ width: "100%" }} />
-            </Form.Item>
-            <Form.Item
-              label="优惠价"
-              name="discountPrice"
-              style={{ flex: 1 }}
-              rules={[
-                { required: true, message: "请输入优惠价" },
-                ({ getFieldValue }) => ({
-                  validator(_, value) {
-                    const originalPrice = getFieldValue("originalPrice");
-                    if (value === undefined || value === null) return Promise.resolve();
-                    if (Number(value) <= Number(originalPrice || 0)) return Promise.resolve();
-                    return Promise.reject(new Error("优惠价不能高于原价"));
-                  },
-                }),
-              ]}
-            >
-              <InputNumber min={0} precision={2} style={{ width: "100%" }} />
-            </Form.Item>
-          </Space>
-
-          <Form.List
-            name="specs"
-            rules={[
-              {
-                validator: async (_, value) => {
-                  if (Array.isArray(value) && value.length > 0) return;
-                  throw new Error("请至少添加一条服务规格");
-                },
-              },
-            ]}
-          >
-            {(fields, { add, remove }, { errors }) => (
-              <div>
-                <div style={{ marginBottom: 8, fontWeight: 600 }}>服务规格</div>
-                {fields.map((field) => (
-                  <Space key={field.key} style={{ display: "flex", marginBottom: 8 }} align="start">
-                    <Form.Item
-                      {...field}
-                      label="规格名称"
-                      name={[field.name, "name"]}
-                      rules={[{ required: true, message: "请输入规格名称" }]}
-                    >
-                      <Input placeholder="例如：4小时" style={{ width: 260 }} />
-                    </Form.Item>
-                    <Form.Item
-                      {...field}
-                      label="价格"
-                      name={[field.name, "price"]}
-                      rules={[{ required: true, message: "请输入价格" }]}
-                    >
-                      <InputNumber min={0} precision={2} style={{ width: 180 }} />
-                    </Form.Item>
-                    <Button danger style={{ marginTop: 30 }} onClick={() => remove(field.name)}>
-                      删除
-                    </Button>
-                  </Space>
-                ))}
-                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add({ name: "", price: 0 })}>
-                  新增服务规格
-                </Button>
-                <Form.ErrorList errors={errors} />
-              </div>
-            )}
-          </Form.List>
-
-          <Form.List
-            name="comments"
-            rules={[
-              {
-                validator: async (_, value) => {
-                  if (Array.isArray(value) && value.length > 0) return;
-                  throw new Error("请至少添加一条假评论");
-                },
-              },
-            ]}
-          >
-            {(fields, { add, remove }, { errors }) => (
-              <div style={{ marginTop: 20 }}>
-                <div style={{ marginBottom: 8, fontWeight: 600 }}>假评论</div>
-                {fields.map((field) => (
-                  <Space key={field.key} style={{ display: "flex", marginBottom: 8 }} align="start">
-                    <Form.Item
-                      {...field}
-                      label="星级"
-                      name={[field.name, "star"]}
-                      rules={[{ required: true, message: "请选择星级" }]}
-                    >
-                      <Rate />
-                    </Form.Item>
-                    <Form.Item
-                      {...field}
-                      label="评论内容"
-                      name={[field.name, "content"]}
-                      rules={[{ required: true, message: "请输入评论内容" }]}
-                    >
-                      <Input placeholder="请输入评论内容" style={{ width: 360 }} />
-                    </Form.Item>
-                    <Button danger style={{ marginTop: 30 }} onClick={() => remove(field.name)}>
-                      删除
-                    </Button>
-                  </Space>
-                ))}
-                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add({ star: 5, content: "" })}>
-                  新增评论
-                </Button>
-                <Form.ErrorList errors={errors} />
-              </div>
-            )}
-          </Form.List>
         </Form>
+      </Modal>
+
+      <Modal
+        width={1000}
+        open={openPackageDetailModal}
+        title="编辑套餐包"
+        okButtonProps={{ style: { display: "none" } }}
+        cancelText="关闭"
+        onCancel={() => {
+          setOpenPackageDetailModal(false);
+          setSelectedPackage(null);
+          setReviewRows([]);
+          setSpecRows([]);
+          setReviewPage({ current: 1, size: 10, total: 0 });
+        }}
+      >
+        <Descriptions bordered column={2} size="small" style={{ marginBottom: 16 }}>
+          <Descriptions.Item label="套餐名称">{selectedPackage?.name || "-"}</Descriptions.Item>
+          <Descriptions.Item label="状态">{selectedPackage?.status ?? "-"}</Descriptions.Item>
+          <Descriptions.Item label="原价">¥{Number(selectedPackage?.originalPrice) || 0}</Descriptions.Item>
+          <Descriptions.Item label="现价">¥{Number(selectedPackage?.price) || 0}</Descriptions.Item>
+          <Descriptions.Item label="销量">{selectedPackage?.salesVolume || 0}</Descriptions.Item>
+          <Descriptions.Item label="服务地区">{selectedPackage?.serviceArea || "-"}</Descriptions.Item>
+          <Descriptions.Item label="套餐描述" span={2}>
+            {selectedPackage?.description || "-"}
+          </Descriptions.Item>
+          <Descriptions.Item label="封面图片">
+            {selectedPackage?.posterImage ? <Image width={120} src={selectedPackage.posterImage} /> : "-"}
+          </Descriptions.Item>
+          <Descriptions.Item label="详情图片">
+            {selectedPackage?.detailImage ? <Image width={120} src={selectedPackage.detailImage} /> : "-"}
+          </Descriptions.Item>
+        </Descriptions>
+
+        <div style={{ fontWeight: 600, marginBottom: 8 }}>评论管理</div>
+        <Table
+          rowKey="id"
+          columns={reviewColumns}
+          dataSource={reviewRows}
+          loading={reviewLoading}
+          pagination={{
+            current: reviewPage.current,
+            pageSize: reviewPage.size,
+            total: reviewPage.total,
+            onChange: (current, size) => loadReviews(selectedPackage, current, size),
+          }}
+          locale={{ emptyText: "暂无评论" }}
+        />
+
+        <div style={{ fontWeight: 600, margin: "16px 0 8px" }}>规格管理</div>
+        <Table
+          rowKey="id"
+          columns={specColumns}
+          dataSource={specRows}
+          loading={specLoading}
+          pagination={false}
+          locale={{ emptyText: "暂无规格" }}
+        />
       </Modal>
     </PageCard>
   );
