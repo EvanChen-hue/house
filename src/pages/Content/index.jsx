@@ -9,6 +9,8 @@ import {
   InputNumber,
   Modal,
   Popconfirm,
+  Rate,
+  Select,
   Space,
   Table,
   Upload,
@@ -25,6 +27,37 @@ const normalizeUpload = (event) => {
 
 function getUploadFile(fileList) {
   return fileList?.[0]?.originFileObj || null;
+}
+
+const IMAGE_BASE_URL = "https://requests.taiyang.chat/house/uploads/";
+const REVIEW_TAG_OPTIONS = [
+  "干净细致",
+  "准时高效",
+  "工具齐全",
+  "态度友善",
+  "价格透明",
+  "下单便捷",
+  "专业规范",
+  "宠物友好",
+  "老人放心",
+  "值得推荐",
+].map((item) => ({ label: item, value: item }));
+
+function buildImageUrl(rawValue) {
+  const cleaned = String(rawValue || "")
+    .trim()
+    .replace(/^\\*"+|\\*"+$/g, "")
+    .replace(/^\/+/, "");
+
+  if (!cleaned) {
+    return "";
+  }
+
+  if (/^(https?:)?\/\//i.test(cleaned)) {
+    return cleaned;
+  }
+
+  return `${IMAGE_BASE_URL}${cleaned}`;
 }
 
 export default function Content() {
@@ -47,12 +80,18 @@ export default function Content() {
   const [openPackageFormModal, setOpenPackageFormModal] = useState(false);
   const [packageForm] = Form.useForm();
   const [openPackageDetailModal, setOpenPackageDetailModal] = useState(false);
+  const [openAddSpecModal, setOpenAddSpecModal] = useState(false);
+  const [openAddReviewModal, setOpenAddReviewModal] = useState(false);
+  const [specForm] = Form.useForm();
+  const [reviewForm] = Form.useForm();
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [reviewRows, setReviewRows] = useState([]);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewPage, setReviewPage] = useState({ current: 1, size: 10, total: 0 });
   const [specRows, setSpecRows] = useState([]);
   const [specLoading, setSpecLoading] = useState(false);
+  const [saveSpecLoading, setSaveSpecLoading] = useState(false);
+  const [saveReviewLoading, setSaveReviewLoading] = useState(false);
 
   const loadCategories = async (nextCurrent = page.current, nextSize = page.size) => {
     try {
@@ -167,9 +206,85 @@ export default function Content() {
 
   const handleOpenPackageDetail = async (record) => {
     setSelectedPackage(record);
+    specForm.resetFields();
+    setOpenAddSpecModal(false);
+    setOpenAddReviewModal(false);
+    reviewForm.setFieldsValue({
+      rating: 5,
+      selectedTags: [],
+      visitorName: "",
+      content: "",
+    });
     setOpenPackageDetailModal(true);
     setReviewPage({ current: 1, size: 10, total: 0 });
     await Promise.all([loadReviews(record, 1, 10), loadSpecs(record)]);
+  };
+
+  const handleOpenAddSpec = () => {
+    specForm.resetFields();
+    setOpenAddSpecModal(true);
+  };
+
+  const handleOpenAddReview = () => {
+    reviewForm.setFieldsValue({
+      rating: 5,
+      selectedTags: [],
+      visitorName: "",
+      content: "",
+    });
+    setOpenAddReviewModal(true);
+  };
+
+  const handleAddSpec = async (values) => {
+    if (!selectedPackage?.id) {
+      message.warning("未找到套餐包");
+      return;
+    }
+
+    try {
+      setSaveSpecLoading(true);
+      await contentApi.savePackageSpec({
+        packageId: selectedPackage.id,
+        specName: String(values.specName || "").trim(),
+        price: Number(values.price) || 0,
+      });
+      message.success("规格添加成功");
+      setOpenAddSpecModal(false);
+      specForm.resetFields();
+      await loadSpecs(selectedPackage);
+    } finally {
+      setSaveSpecLoading(false);
+    }
+  };
+
+  const handleAddReview = async (values) => {
+    if (!selectedPackage?.id) {
+      message.warning("未找到套餐包");
+      return;
+    }
+
+    try {
+      setSaveReviewLoading(true);
+      await contentApi.addAdminReview({
+        rating: Number(values.rating) || 5,
+        content: String(values.content || "").trim(),
+        selectedTags: (values.selectedTags || []).join(", "),
+        visitorName: String(values.visitorName || "").trim(),
+        packageId: Number(selectedPackage.id),
+      });
+      message.success("评论添加成功");
+      setOpenAddReviewModal(false);
+      reviewForm.setFieldsValue({
+        rating: 5,
+        selectedTags: [],
+        visitorName: "",
+        content: "",
+      });
+      setReviewPage((prev) => ({ ...prev, current: 1 }));
+      await loadReviews(selectedPackage, 1, reviewPage.size);
+    } finally {
+      setSaveReviewLoading(false);
+    }
   };
 
   const handleRemoveCategory = async (record) => {
@@ -360,6 +475,9 @@ export default function Content() {
       render: (value) => `¥${Number(value) || 0}`,
     },
   ];
+
+  const posterImageUrl = buildImageUrl(selectedPackage?.posterImage);
+  const detailImageUrl = buildImageUrl(selectedPackage?.detailImage);
 
   return (
     <PageCard>
@@ -604,7 +722,11 @@ export default function Content() {
         cancelText="关闭"
         onCancel={() => {
           setOpenPackageDetailModal(false);
+          setOpenAddSpecModal(false);
+          setOpenAddReviewModal(false);
           setSelectedPackage(null);
+          specForm.resetFields();
+          reviewForm.resetFields();
           setReviewRows([]);
           setSpecRows([]);
           setReviewPage({ current: 1, size: 10, total: 0 });
@@ -621,14 +743,22 @@ export default function Content() {
             {selectedPackage?.description || "-"}
           </Descriptions.Item>
           <Descriptions.Item label="封面图片">
-            {selectedPackage?.posterImage ? <Image width={120} src={selectedPackage.posterImage} /> : "-"}
+            {posterImageUrl ? <Image width={120} src={posterImageUrl} /> : "-"}
           </Descriptions.Item>
           <Descriptions.Item label="详情图片">
-            {selectedPackage?.detailImage ? <Image width={120} src={selectedPackage.detailImage} /> : "-"}
+            {detailImageUrl ? <Image width={120} src={detailImageUrl} /> : "-"}
           </Descriptions.Item>
         </Descriptions>
 
-        <div style={{ fontWeight: 600, marginBottom: 8 }}>评论管理</div>
+        <div style={{ fontWeight: 600, marginBottom: 8 }}>
+          <Space>
+            <span>评论管理</span>
+            <Button type="primary" onClick={handleOpenAddReview}>
+              添加评论
+            </Button>
+          </Space>
+        </div>
+
         <Table
           rowKey="id"
           columns={reviewColumns}
@@ -638,12 +768,21 @@ export default function Content() {
             current: reviewPage.current,
             pageSize: reviewPage.size,
             total: reviewPage.total,
+            showSizeChanger: true,
             onChange: (current, size) => loadReviews(selectedPackage, current, size),
           }}
           locale={{ emptyText: "暂无评论" }}
         />
 
-        <div style={{ fontWeight: 600, margin: "16px 0 8px" }}>规格管理</div>
+        <div style={{ fontWeight: 600, margin: "16px 0 8px" }}>
+          <Space>
+            <span>规格管理</span>
+            <Button type="primary" onClick={handleOpenAddSpec}>
+              添加规格
+            </Button>
+          </Space>
+        </div>
+
         <Table
           rowKey="id"
           columns={specColumns}
@@ -652,6 +791,106 @@ export default function Content() {
           pagination={false}
           locale={{ emptyText: "暂无规格" }}
         />
+      </Modal>
+
+      <Modal
+        width={600}
+        open={openAddReviewModal}
+        title="添加评论"
+        okText="保存"
+        cancelText="取消"
+        confirmLoading={saveReviewLoading}
+        destroyOnClose
+        onCancel={() => {
+          setOpenAddReviewModal(false);
+          reviewForm.resetFields();
+        }}
+        onOk={() => reviewForm.submit()}
+      >
+        <Form
+          form={reviewForm}
+          layout="vertical"
+          onFinish={handleAddReview}
+          initialValues={{ rating: 5, selectedTags: [] }}
+        >
+          <Space wrap size={12} style={{ width: "100%" }} align="end">
+            <Form.Item
+              label="虚拟用户名"
+              name="visitorName"
+              style={{ minWidth: 220, marginBottom: 8 }}
+              rules={[
+                { required: true, message: "请输入虚拟用户名" },
+                { whitespace: true, message: "请输入虚拟用户名" },
+              ]}
+            >
+              <Input placeholder="例如：爱家用户001" maxLength={20} />
+            </Form.Item>
+
+            <Form.Item
+              label="评分"
+              name="rating"
+              style={{ minWidth: 220, marginBottom: 8 }}
+              rules={[{ required: true, message: "请选择评分" }]}
+            >
+              <Rate allowClear={false} />
+            </Form.Item>
+          </Space>
+
+          <Form.Item
+            label="标签"
+            name="selectedTags"
+            rules={[{ required: true, message: "请选择至少一个标签" }]}
+          >
+            <Select
+              mode="multiple"
+              options={REVIEW_TAG_OPTIONS}
+              placeholder="请选择标签"
+              maxTagCount="responsive"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="评论内容"
+            name="content"
+            rules={[
+              { required: true, message: "请输入评论内容" },
+              { whitespace: true, message: "请输入评论内容" },
+            ]}
+          >
+            <Input.TextArea rows={4} maxLength={300} placeholder="请输入评论内容" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        width={520}
+        open={openAddSpecModal}
+        title="添加规格"
+        okText="保存"
+        cancelText="取消"
+        confirmLoading={saveSpecLoading}
+        destroyOnClose
+        onCancel={() => {
+          setOpenAddSpecModal(false);
+          specForm.resetFields();
+        }}
+        onOk={() => specForm.submit()}
+      >
+        <Form form={specForm} layout="vertical" onFinish={handleAddSpec}>
+          <Form.Item
+            label="规格名称"
+            name="specName"
+            rules={[
+              { required: true, message: "请输入规格名称" },
+              { whitespace: true, message: "请输入规格名称" },
+            ]}
+          >
+            <Input placeholder="规格名称，例如：深度保洁3小时" maxLength={30} />
+          </Form.Item>
+          <Form.Item label="规格价格" name="price" rules={[{ required: true, message: "请输入规格价格" }]}>
+            <InputNumber min={0} precision={2} placeholder="规格价格" style={{ width: "100%" }} />
+          </Form.Item>
+        </Form>
       </Modal>
     </PageCard>
   );

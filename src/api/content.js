@@ -113,20 +113,31 @@ export const contentApi = {
       form.append("posterFile", payload.posterFile);
     }
     if (payload.detailFiles) {
-      form.append("detailFiles", payload.detailFiles);
+      if (Array.isArray(payload.detailFiles)) {
+        payload.detailFiles.forEach((file) => {
+          if (file) {
+            form.append("detailFiles", file);
+          }
+        });
+      } else {
+        form.append("detailFiles", payload.detailFiles);
+      }
     }
 
-    if (payload.categoryId !== undefined && payload.categoryId !== null) {
-      form.append("categoryId", payload.categoryId);
-    }
+    const packageData = {
+      id: Number(payload?.id) || 0,
+      categoryId: Number(payload?.categoryId) || 0,
+      name: payload?.name || "",
+      description: payload?.description || "",
+      originalPrice: Number(payload?.originalPrice) || 0,
+      price: Number(payload?.price) || 0,
+      salesVolume: Number(payload?.salesVolume) || 0,
+      serviceArea: payload?.serviceArea || "",
+      serviceSpec: payload?.serviceSpec || "",
+      status: Number(payload?.status) || 0,
+    };
 
-    form.append("name", payload.name);
-    form.append("description", payload.description);
-    form.append("originalPrice", payload.originalPrice);
-    form.append("price", payload.price);
-    form.append("salesVolume", payload.salesVolume);
-    form.append("serviceArea", payload.serviceArea);
-    form.append("status", payload.status);
+    form.append("packageData", JSON.stringify(packageData));
 
     return request({
       url: "/house/package/admin/add",
@@ -146,6 +157,20 @@ export const contentApi = {
         packageId,
         specName,
         price,
+      },
+    });
+  },
+
+  addAdminReview({ rating, content, selectedTags, visitorName, packageId }) {
+    return request({
+      url: "/house/review/admin/add",
+      method: "POST",
+      data: {
+        rating,
+        content,
+        selectedTags,
+        visitorName,
+        packageId,
       },
     });
   },
