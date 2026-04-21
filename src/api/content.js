@@ -149,6 +149,14 @@ export const contentApi = {
     });
   },
 
+  removePackage(id) {
+    return request({
+      url: `/house/package/admin/${id}`,
+      method: "DELETE",
+      params: { id },
+    });
+  },
+
   savePackageSpec({ packageId, specName, price }) {
     return request({
       url: "/house/admin/package/spec/save",
@@ -166,12 +174,21 @@ export const contentApi = {
       url: "/house/review/admin/add",
       method: "POST",
       data: {
+        orderId: "",
         rating,
         content,
         selectedTags,
         visitorName,
-        packageId,
+        packageId: packageId,
       },
+    });
+  },
+
+  removeAdminReview(id) {
+    return request({
+      url: `/house/review/admin/delete/${id}`,
+      method: "DELETE",
+      params: { id },
     });
   },
 

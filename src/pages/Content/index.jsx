@@ -29,7 +29,7 @@ function getUploadFile(fileList) {
   return fileList?.[0]?.originFileObj || null;
 }
 
-const IMAGE_BASE_URL = "https://requests.taiyang.chat/house/uploads/";
+const IMAGE_BASE_URL = "https://requests.taiyang.chat/";
 const REVIEW_TAG_OPTIONS = [
   "干净细致",
   "准时高效",
@@ -41,6 +41,17 @@ const REVIEW_TAG_OPTIONS = [
   "宠物友好",
   "老人放心",
   "值得推荐",
+].map((item) => ({ label: item, value: item }));
+const SERVICE_AREA_OPTIONS = [
+  "顺庆区",
+  "高坪区",
+  "嘉陵区",
+  "南部县",
+  "营山县",
+  "蓬安县",
+  "仪陇县",
+  "西充县",
+  "阆中市",
 ].map((item) => ({ label: item, value: item }));
 
 function buildImageUrl(rawValue) {
@@ -265,12 +276,14 @@ export default function Content() {
 
     try {
       setSaveReviewLoading(true);
+      const selectedTags = (values.selectedTags || []).filter(Boolean).join(", ");
+
       await contentApi.addAdminReview({
         rating: Number(values.rating) || 5,
         content: String(values.content || "").trim(),
-        selectedTags: (values.selectedTags || []).join(", "),
+        selectedTags: selectedTags ? [selectedTags] : [],
         visitorName: String(values.visitorName || "").trim(),
-        packageId: Number(selectedPackage.id),
+        packageId: selectedPackage.id,
       });
       message.success("评论添加成功");
       setOpenAddReviewModal(false);
@@ -285,6 +298,34 @@ export default function Content() {
     } finally {
       setSaveReviewLoading(false);
     }
+  };
+
+  const handleRemoveReview = async (record) => {
+    if (!selectedPackage?.id) {
+      message.warning("未找到套餐包");
+      return;
+    }
+
+    await contentApi.removeAdminReview(record.id);
+    message.success("评论删除成功");
+
+    if (reviewRows.length === 1 && reviewPage.current > 1) {
+      await loadReviews(selectedPackage, reviewPage.current - 1, reviewPage.size);
+      return;
+    }
+
+    await loadReviews(selectedPackage, reviewPage.current, reviewPage.size);
+  };
+
+  const handleRemoveSpec = async (record) => {
+    if (!selectedPackage?.id) {
+      message.warning("未找到套餐包");
+      return;
+    }
+
+    await contentApi.removePackageSpec(record.id);
+    message.success("规格删除成功");
+    await loadSpecs(selectedPackage);
   };
 
   const handleRemoveCategory = async (record) => {
@@ -358,7 +399,7 @@ export default function Content() {
       originalPrice: Number(values.originalPrice) || 0,
       price: Number(values.price) || 0,
       salesVolume: Number(values.salesVolume) || 0,
-      serviceArea: String(values.serviceArea || "").trim(),
+      serviceArea: (values.serviceArea || []).join(","),
       status: 1,
     });
 
@@ -366,6 +407,18 @@ export default function Content() {
     setOpenPackageFormModal(false);
     packageForm.resetFields();
     loadPackages(currentCategory, packagePage.current, packagePage.size);
+  };
+
+  const handleRemovePackage = async (record) => {
+    await contentApi.removePackage(record.id);
+    message.success("套餐包删除成功");
+
+    if (packageRows.length === 1 && packagePage.current > 1) {
+      await loadPackages(currentCategory, packagePage.current - 1, packagePage.size);
+      return;
+    }
+
+    await loadPackages(currentCategory, packagePage.current, packagePage.size);
   };
 
   const categoryColumns = [
@@ -403,6 +456,11 @@ export default function Content() {
 
   const packageColumns = [
     {
+      title: "套餐包ID",
+      dataIndex: "id",
+      width: 120,
+    },
+    {
       title: "套餐包名称",
       dataIndex: "name",
       width: 220,
@@ -432,18 +490,35 @@ export default function Content() {
     {
       title: "操作",
       key: "action",
-      width: 120,
+      width: 180,
       render: (_, record) => (
-        <Button type="link" onClick={() => handleOpenPackageDetail(record)}>
-          编辑
-        </Button>
+        <Space>
+          <Button type="link" onClick={() => handleOpenPackageDetail(record)}>
+            编辑
+          </Button>
+          <Popconfirm
+            title="确定删除这个套餐包吗？"
+            okText="删除"
+            cancelText="取消"
+            onConfirm={() => handleRemovePackage(record)}
+          >
+            <Button type="link" danger icon={<DeleteOutlined />}>
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
 
   const reviewColumns = [
     {
-      title: "访客名",
+      title: "评论ID",
+      dataIndex: "id",
+      width: 100,
+    },
+    {
+      title: "用户名",
       dataIndex: "visitorName",
       width: 120,
     },
@@ -461,9 +536,31 @@ export default function Content() {
       dataIndex: "createTime",
       width: 180,
     },
+    {
+      title: "操作",
+      key: "action",
+      width: 100,
+      render: (_, record) => (
+        <Popconfirm
+          title="确定删除这条评论吗？"
+          okText="删除"
+          cancelText="取消"
+          onConfirm={() => handleRemoveReview(record)}
+        >
+          <Button type="link" danger icon={<DeleteOutlined />}>
+            删除
+          </Button>
+        </Popconfirm>
+      ),
+    },
   ];
 
   const specColumns = [
+    {
+      title: "规格ID",
+      dataIndex: "id",
+      width: 100,
+    },
     {
       title: "规格名称",
       dataIndex: "specName",
@@ -473,6 +570,23 @@ export default function Content() {
       dataIndex: "price",
       width: 140,
       render: (value) => `¥${Number(value) || 0}`,
+    },
+    {
+      title: "操作",
+      key: "action",
+      width: 100,
+      render: (_, record) => (
+        <Popconfirm
+          title="确定删除这个规格吗？"
+          okText="删除"
+          cancelText="取消"
+          onConfirm={() => handleRemoveSpec(record)}
+        >
+          <Button type="link" danger icon={<DeleteOutlined />}>
+            删除
+          </Button>
+        </Popconfirm>
+      ),
     },
   ];
 
@@ -675,12 +789,15 @@ export default function Content() {
               label="服务地区"
               name="serviceArea"
               style={{ flex: 1 }}
-              rules={[
-                { required: true, message: "请输入服务地区" },
-                { whitespace: true, message: "请输入服务地区" },
-              ]}
+              rules={[{ required: true, message: "请选择服务地区" }]}
             >
-              <Input placeholder="例如：上海市全境" />
+              <Select
+                mode="multiple"
+                allowClear
+                maxTagCount="responsive"
+                placeholder="请选择服务地区"
+                options={SERVICE_AREA_OPTIONS}
+              />
             </Form.Item>
           </Space>
 
@@ -733,6 +850,7 @@ export default function Content() {
         }}
       >
         <Descriptions bordered column={2} size="small" style={{ marginBottom: 16 }}>
+          <Descriptions.Item label="套餐包ID">{selectedPackage?.id ?? "-"}</Descriptions.Item>
           <Descriptions.Item label="套餐名称">{selectedPackage?.name || "-"}</Descriptions.Item>
           <Descriptions.Item label="状态">{selectedPackage?.status ?? "-"}</Descriptions.Item>
           <Descriptions.Item label="原价">¥{Number(selectedPackage?.originalPrice) || 0}</Descriptions.Item>
